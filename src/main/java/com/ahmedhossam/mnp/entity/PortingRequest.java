@@ -12,7 +12,8 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "porting_request")
+@Table(name = "porting_request",
+       indexes = @Index(name = "idx_porting_request_phone_status", columnList = "phone_number, status"))
 @Getter
 @Setter
 @NoArgsConstructor
