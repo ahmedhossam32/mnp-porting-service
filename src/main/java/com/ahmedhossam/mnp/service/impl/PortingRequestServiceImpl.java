@@ -6,7 +6,10 @@ import com.ahmedhossam.mnp.entity.PortingRequest;
 import com.ahmedhossam.mnp.enums.Operator;
 import com.ahmedhossam.mnp.enums.PortingRequestStatus;
 import com.ahmedhossam.mnp.exception.DuplicatePendingRequestException;
+import com.ahmedhossam.mnp.exception.InvalidRequestStateException;
+import com.ahmedhossam.mnp.exception.PortingRequestNotFoundException;
 import com.ahmedhossam.mnp.exception.SelfPortingNotAllowedException;
+import com.ahmedhossam.mnp.exception.UnauthorizedDonorActionException;
 import com.ahmedhossam.mnp.mapper.PortingRequestMapper;
 import com.ahmedhossam.mnp.repository.PortingRequestRepository;
 import com.ahmedhossam.mnp.service.PhoneHolderResolver;
@@ -40,5 +43,34 @@ public class PortingRequestServiceImpl implements PortingRequestService {
         PortingRequest saved = repository.save(entity);
 
         return mapper.toResponseDto(saved);
+    }
+
+    @Override
+    public PortingRequestResponseDto accept(Long id, Operator caller) {
+        PortingRequest request = validateDonorActionAndGetRequest(id, caller);
+        request.setStatus(PortingRequestStatus.ACCEPTED);
+        return mapper.toResponseDto(repository.save(request));
+    }
+
+    @Override
+    public PortingRequestResponseDto reject(Long id, Operator caller) {
+        PortingRequest request = validateDonorActionAndGetRequest(id, caller);
+        request.setStatus(PortingRequestStatus.REJECTED);
+        return mapper.toResponseDto(repository.save(request));
+    }
+
+    private PortingRequest validateDonorActionAndGetRequest(Long id, Operator caller) {
+        PortingRequest request = repository.findById(id)
+                .orElseThrow(() -> new PortingRequestNotFoundException("Porting request not found: " + id));
+
+        if (request.getDonorOperator() != caller) {
+            throw new UnauthorizedDonorActionException("Only the donor can accept or reject this request");
+        }
+
+        if (request.getStatus() != PortingRequestStatus.PENDING) {
+            throw new InvalidRequestStateException("Request is no longer pending: " + request.getStatus());
+        }
+
+        return request;
     }
 }
