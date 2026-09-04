@@ -2,6 +2,7 @@ package com.ahmedhossam.mnp.service.impl;
 
 import com.ahmedhossam.mnp.dto.request.CreatePortingRequestDto;
 import com.ahmedhossam.mnp.dto.response.PagedResponseDto;
+import com.ahmedhossam.mnp.dto.response.PhoneStatusResponseDto;
 import com.ahmedhossam.mnp.dto.response.PortingRequestResponseDto;
 import com.ahmedhossam.mnp.entity.PortingRequest;
 import com.ahmedhossam.mnp.enums.Operator;
@@ -83,6 +84,22 @@ public class PortingRequestServiceImpl implements PortingRequestService {
         }
 
         return mapper.toResponseDto(request);
+    }
+
+    @Override
+    public PhoneStatusResponseDto getPhoneStatus(String phoneNumber) {
+        Operator currentHolder = phoneHolderResolver.resolveCurrentHolder(phoneNumber);
+
+        String activeStatus = repository
+                .existsByPhoneNumberAndStatus(phoneNumber, PortingRequestStatus.PENDING)
+                ? PortingRequestStatus.PENDING.name()
+                : null;
+
+        return PhoneStatusResponseDto.builder()
+                .phoneNumber(phoneNumber)
+                .currentHolder(currentHolder.name())
+                .activeRequestStatus(activeStatus)
+                .build();
     }
 
     private PortingRequest validateDonorActionAndGetRequest(Long id, Operator caller) {

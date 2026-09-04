@@ -14,6 +14,6 @@ import lombok.Setter;
 public class CreatePortingRequestDto {
 
     @NotBlank(message = "Phone number is required")
-    @Pattern(regexp = "^[0][0-9]{10}$", message = "Phone number must be 11 digits starting with 0")
+    @Pattern(regexp = PhoneNumberValidation.PATTERN, message = PhoneNumberValidation.MESSAGE)
     private String phoneNumber;
 }
