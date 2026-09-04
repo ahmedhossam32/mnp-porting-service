@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -24,4 +26,6 @@ public interface PortingRequestRepository extends JpaRepository<PortingRequest, 
            "pr.recipientOperator = :caller OR pr.donorOperator = :caller OR pr.status = 'ACCEPTED' " +
            "ORDER BY pr.createdAt DESC, pr.id DESC")
     Page<PortingRequest> findVisibleTo(@Param("caller") Operator caller, Pageable pageable);
+
+    List<PortingRequest> findByStatusAndCreatedAtBefore(PortingRequestStatus status, LocalDateTime cutoff);
 }
