@@ -1,6 +1,7 @@
 package com.ahmedhossam.mnp.service.impl;
 
 import com.ahmedhossam.mnp.dto.request.CreatePortingRequestDto;
+import com.ahmedhossam.mnp.dto.response.PagedResponseDto;
 import com.ahmedhossam.mnp.dto.response.PortingRequestResponseDto;
 import com.ahmedhossam.mnp.entity.PortingRequest;
 import com.ahmedhossam.mnp.enums.Operator;
@@ -15,6 +16,8 @@ import com.ahmedhossam.mnp.repository.PortingRequestRepository;
 import com.ahmedhossam.mnp.service.PhoneHolderResolver;
 import com.ahmedhossam.mnp.service.PortingRequestService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -57,6 +60,13 @@ public class PortingRequestServiceImpl implements PortingRequestService {
         PortingRequest request = validateDonorActionAndGetRequest(id, caller);
         request.setStatus(PortingRequestStatus.REJECTED);
         return mapper.toResponseDto(repository.save(request));
+    }
+
+    @Override
+    public PagedResponseDto<PortingRequestResponseDto> list(Operator caller, Pageable pageable) {
+        Page<PortingRequestResponseDto> page = repository.findVisibleTo(caller, pageable)
+                .map(mapper::toResponseDto);
+        return PagedResponseDto.from(page);
     }
 
     private PortingRequest validateDonorActionAndGetRequest(Long id, Operator caller) {

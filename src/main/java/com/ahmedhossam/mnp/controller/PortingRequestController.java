@@ -1,14 +1,17 @@
 package com.ahmedhossam.mnp.controller;
 
 import com.ahmedhossam.mnp.dto.request.CreatePortingRequestDto;
+import com.ahmedhossam.mnp.dto.response.PagedResponseDto;
 import com.ahmedhossam.mnp.dto.response.PortingRequestResponseDto;
 import com.ahmedhossam.mnp.enums.Operator;
 import com.ahmedhossam.mnp.security.OperatorContext;
 import com.ahmedhossam.mnp.service.PortingRequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -42,5 +45,11 @@ public class PortingRequestController {
         Operator caller = operatorContext.getCurrentOperator();
         PortingRequestResponseDto response = service.reject(id, caller);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping
+    public ResponseEntity<PagedResponseDto<PortingRequestResponseDto>> list(Pageable pageable) {
+        Operator caller = operatorContext.getCurrentOperator();
+        return ResponseEntity.ok(service.list(caller, pageable));
     }
 }
