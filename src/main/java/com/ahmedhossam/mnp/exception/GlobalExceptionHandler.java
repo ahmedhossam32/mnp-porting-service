@@ -48,6 +48,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(InvisibleToOperatorException.class)
+    public ResponseEntity<ErrorResponseDto> handleInvisible(InvisibleToOperatorException ex,
+                                                               HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(UnauthorizedDonorActionException.class)
     public ResponseEntity<ErrorResponseDto> handleUnauthorizedDonorAction(UnauthorizedDonorActionException ex,
                                                                             HttpServletRequest request) {

@@ -8,6 +8,7 @@ import com.ahmedhossam.mnp.enums.Operator;
 import com.ahmedhossam.mnp.enums.PortingRequestStatus;
 import com.ahmedhossam.mnp.exception.DuplicatePendingRequestException;
 import com.ahmedhossam.mnp.exception.InvalidRequestStateException;
+import com.ahmedhossam.mnp.exception.InvisibleToOperatorException;
 import com.ahmedhossam.mnp.exception.PortingRequestNotFoundException;
 import com.ahmedhossam.mnp.exception.SelfPortingNotAllowedException;
 import com.ahmedhossam.mnp.exception.UnauthorizedDonorActionException;
@@ -67,6 +68,21 @@ public class PortingRequestServiceImpl implements PortingRequestService {
         Page<PortingRequestResponseDto> page = repository.findVisibleTo(caller, pageable)
                 .map(mapper::toResponseDto);
         return PagedResponseDto.from(page);
+    }
+
+    @Override
+    public PortingRequestResponseDto getById(Long id, Operator caller) {
+        PortingRequest request = repository.findById(id)
+                .orElseThrow(() -> new PortingRequestNotFoundException("Porting request not found: " + id));
+
+        boolean involved = request.getRecipientOperator() == caller || request.getDonorOperator() == caller;
+        boolean isAccepted = request.getStatus() == PortingRequestStatus.ACCEPTED;
+
+        if (!involved && !isAccepted) {
+            throw new InvisibleToOperatorException("Porting request not found: " + id);
+        }
+
+        return mapper.toResponseDto(request);
     }
 
     private PortingRequest validateDonorActionAndGetRequest(Long id, Operator caller) {

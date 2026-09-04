@@ -11,4 +11,5 @@ public interface PortingRequestService {
     PortingRequestResponseDto accept(Long id, Operator caller);
     PortingRequestResponseDto reject(Long id, Operator caller);
     PagedResponseDto<PortingRequestResponseDto> list(Operator caller, Pageable pageable);
+    PortingRequestResponseDto getById(Long id, Operator caller);
 }

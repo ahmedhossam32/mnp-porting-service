@@ -52,4 +52,10 @@ public class PortingRequestController {
         Operator caller = operatorContext.getCurrentOperator();
         return ResponseEntity.ok(service.list(caller, pageable));
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<PortingRequestResponseDto> getById(@PathVariable Long id) {
+        Operator caller = operatorContext.getCurrentOperator();
+        return ResponseEntity.ok(service.getById(id, caller));
+    }
 }
