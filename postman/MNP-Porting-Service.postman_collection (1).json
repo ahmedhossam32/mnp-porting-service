@@ -1,0 +1,833 @@
+{
+  "info": {
+    "name": "MNP Porting Service - Full Test Suite",
+    "description": "Comprehensive scenario coverage for the MNP Porting Service API: create, accept, reject, list, get-by-id, and phone-status endpoints, including business rules, validation, and HTTP-level edge cases.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1" },
+    { "key": "acceptTargetId", "value": "" },
+    { "key": "rejectTargetId", "value": "" },
+    { "key": "wrongDonorTargetId", "value": "" },
+    { "key": "lifecycleId", "value": "" },
+    { "key": "sharedPhone1", "value": "01090001111" },
+    { "key": "sharedPhone2", "value": "01090002222" }
+  ],
+  "item": [
+    {
+      "name": "1. Create - Happy Path & Business Rules",
+      "item": [
+        {
+          "name": "1.1 Create - valid request (fresh number)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+            "const json = pm.response.json();",
+            "pm.test('donorOperator is VODAFONE', () => pm.expect(json.donorOperator).to.eql('VODAFONE'));",
+            "pm.test('status is PENDING', () => pm.expect(json.status).to.eql('PENDING'));",
+            "pm.collectionVariables.set('acceptTargetId', json.id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "orange" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"{{sharedPhone1}}\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "1.2 Create - duplicate pending (409)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+            "pm.test('message mentions pending', () => pm.expect(pm.response.json().message).to.include('pending'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "etisalat" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"{{sharedPhone1}}\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "1.3 Create - self porting (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+            "pm.test('message mentions self porting', () => pm.expect(pm.response.json().message).to.include('itself'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "vodafone" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"{{sharedPhone2}}\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "1.4 Create - Vodafone recipient, Orange range",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "const json = pm.response.json();",
+            "pm.test('recipient VODAFONE', () => pm.expect(json.recipientOperator).to.eql('VODAFONE'));",
+            "pm.test('donor ORANGE', () => pm.expect(json.donorOperator).to.eql('ORANGE'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "vodafone" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"01291110001\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "1.5 Create - Etisalat recipient, Vodafone range",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "const json = pm.response.json();",
+            "pm.test('recipient ETISALAT', () => pm.expect(json.recipientOperator).to.eql('ETISALAT'));",
+            "pm.test('donor VODAFONE', () => pm.expect(json.donorOperator).to.eql('VODAFONE'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "etisalat" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"01091110002\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "1.6 Create - range lower bound (Vodafone 01000000000)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.test('donor VODAFONE', () => pm.expect(pm.response.json().donorOperator).to.eql('VODAFONE'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "orange" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"01000000000\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "1.7 Create - range upper bound (Orange 01299999999)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.test('donor ORANGE', () => pm.expect(pm.response.json().donorOperator).to.eql('ORANGE'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "vodafone" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"01299999999\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Create - Validation & Exception Handling",
+      "item": [
+        {
+          "name": "2.1 Missing organization header (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));",
+            "pm.test('message about missing header', () => pm.expect(pm.response.json().message).to.include('Missing organization'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"01012345678\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "2.2 Invalid organization value (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));",
+            "pm.test('message about unknown org', () => pm.expect(pm.response.json().message).to.include('Unknown organization'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "mtn" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"01012345678\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "2.3 Blank phone number (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "orange" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "2.4 Null phone number (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "orange" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": null}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "2.5 Phone too short (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "orange" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"0101234\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "2.6 Phone too long (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "orange" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"010123456789012\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "2.7 Phone doesn't start with 0 (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "orange" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"11012345678\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "2.8 Phone contains letters (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "orange" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"phoneabcdef\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "2.9 Phone valid shape, outside all ranges (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));",
+            "pm.test('message about unknown operator range', () => pm.expect(pm.response.json().message).to.include('operator range'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "orange" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"01399999999\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "2.10 No request body (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "orange" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "2.11 Array instead of object (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "orange" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "[{\"phoneNumber\": \"01012345678\"}]" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "2.12 Wrong Content-Type (415)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 415', () => pm.response.to.have.status(415));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "orange" },
+              { "key": "Content-Type", "value": "text/plain" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"01012345678\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "2.13 Wrong HTTP method (405)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 405', () => pm.response.to.have.status(405));"
+          ]}}],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "organization", "value": "orange" }],
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "2.14 Non-existent route (404)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404', () => pm.response.to.have.status(404));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "orange" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/nowhere"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Accept",
+      "item": [
+        {
+          "name": "3.1 Correct donor accepts (200)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('status ACCEPTED', () => pm.expect(pm.response.json().status).to.eql('ACCEPTED'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests/{{acceptTargetId}}/accept"
+          }
+        },
+        {
+          "name": "3.2 Accept already-accepted (409)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 409', () => pm.response.to.have.status(409));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests/{{acceptTargetId}}/accept"
+          }
+        },
+        {
+          "name": "3.3 Setup - create request for wrong-donor test",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('wrongDonorTargetId', pm.response.json().id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "orange" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"01090003333\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "3.4 Recipient tries to accept own request (403)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 403', () => pm.response.to.have.status(403));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "organization", "value": "orange" }],
+            "url": "{{baseUrl}}/porting-requests/{{wrongDonorTargetId}}/accept"
+          }
+        },
+        {
+          "name": "3.5 Uninvolved third party tries to accept (403)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 403', () => pm.response.to.have.status(403));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "organization", "value": "etisalat" }],
+            "url": "{{baseUrl}}/porting-requests/{{wrongDonorTargetId}}/accept"
+          }
+        },
+        {
+          "name": "3.6 Accept non-existent id (404)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404', () => pm.response.to.have.status(404));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests/999999999/accept"
+          }
+        },
+        {
+          "name": "3.7 Accept non-numeric id (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests/abc/accept"
+          }
+        },
+        {
+          "name": "3.8 Accept missing org header (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/porting-requests/{{wrongDonorTargetId}}/accept"
+          }
+        },
+        {
+          "name": "3.9 Accept negative id (404)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404', () => pm.response.to.have.status(404));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests/-1/accept"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Reject",
+      "item": [
+        {
+          "name": "4.1 Setup - create request to reject",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('rejectTargetId', pm.response.json().id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "etisalat" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"01090004444\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "4.2 Correct donor rejects (200)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('status REJECTED', () => pm.expect(pm.response.json().status).to.eql('REJECTED'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests/{{rejectTargetId}}/reject"
+          }
+        },
+        {
+          "name": "4.3 Reject already-rejected (409)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 409', () => pm.response.to.have.status(409));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests/{{rejectTargetId}}/reject"
+          }
+        },
+        {
+          "name": "4.4 Reject already-accepted request (409)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 409', () => pm.response.to.have.status(409));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests/{{acceptTargetId}}/reject"
+          }
+        },
+        {
+          "name": "4.5 Wrong donor tries to reject (403)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 403', () => pm.response.to.have.status(403));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "organization", "value": "etisalat" }],
+            "url": "{{baseUrl}}/porting-requests/{{wrongDonorTargetId}}/reject"
+          }
+        },
+        {
+          "name": "4.6 Correct donor rejects previously-untouched request (200)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('status REJECTED', () => pm.expect(pm.response.json().status).to.eql('REJECTED'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests/{{wrongDonorTargetId}}/reject"
+          }
+        },
+        {
+          "name": "4.7 Reject non-existent id (404)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404', () => pm.response.to.have.status(404));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests/888888888/reject"
+          }
+        },
+        {
+          "name": "4.8 Reject non-numeric id (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests/xyz/reject"
+          }
+        },
+        {
+          "name": "4.9 Re-request same number after accept (new donor = new holder)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.test('donor is ORANGE (new holder from 3.1 accept)', () => pm.expect(pm.response.json().donorOperator).to.eql('ORANGE'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "etisalat" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"{{sharedPhone1}}\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. List",
+      "item": [
+        {
+          "name": "5.1 List as Vodafone (default paging)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('has content array', () => pm.expect(json.content).to.be.an('array'));",
+            "pm.test('default pageSize is 20', () => pm.expect(json.pageSize).to.eql(20));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "5.2 List with oversized page size (capped at 100)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('pageSize capped at 100', () => pm.expect(pm.response.json().pageSize).to.eql(100));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests?size=500"
+          }
+        },
+        {
+          "name": "5.3 List deep page beyond data (empty, still 200)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('content is empty', () => pm.expect(pm.response.json().content).to.have.lengthOf(0));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests?page=9999&size=20"
+          }
+        },
+        {
+          "name": "5.4 List missing org header (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": { "method": "GET", "url": "{{baseUrl}}/porting-requests" }
+        },
+        {
+          "name": "5.5 List invalid org header (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "organization", "value": "fake" }],
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "5.6 List wrong method (405)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 405', () => pm.response.to.have.status(405));"
+          ]}}],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "organization", "value": "orange" }],
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Get By Id",
+      "item": [
+        {
+          "name": "6.1 Donor fetches own request (200)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests/{{acceptTargetId}}"
+          }
+        },
+        {
+          "name": "6.2 Uninvolved fetches ACCEPTED request (200 - globally visible)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "organization", "value": "etisalat" }],
+            "url": "{{baseUrl}}/porting-requests/{{acceptTargetId}}"
+          }
+        },
+        {
+          "name": "6.3 Uninvolved fetches REJECTED request (404, not 500)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404', () => pm.response.to.have.status(404));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "organization", "value": "etisalat" }],
+            "url": "{{baseUrl}}/porting-requests/{{rejectTargetId}}"
+          }
+        },
+        {
+          "name": "6.4 Non-existent id (404)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404', () => pm.response.to.have.status(404));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests/555555555"
+          }
+        },
+        {
+          "name": "6.5 Non-numeric id (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "organization", "value": "vodafone" }],
+            "url": "{{baseUrl}}/porting-requests/badid"
+          }
+        },
+        {
+          "name": "6.6 Missing org header (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": { "method": "GET", "url": "{{baseUrl}}/porting-requests/{{acceptTargetId}}" }
+        }
+      ]
+    },
+    {
+      "name": "7. Phone Status",
+      "item": [
+        {
+          "name": "7.1 Fresh Vodafone-range number",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('holder VODAFONE', () => pm.expect(json.currentHolder).to.eql('VODAFONE'));",
+            "pm.test('no active request', () => pm.expect(json.activeRequestStatus).to.be.null);"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "organization", "value": "orange" }],
+            "url": "{{baseUrl}}/phone-numbers/01079998887/status"
+          }
+        },
+        {
+          "name": "7.2 Number with an active pending request",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('active status PENDING', () => pm.expect(json.activeRequestStatus).to.eql('PENDING'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "organization", "value": "etisalat" }],
+            "url": "{{baseUrl}}/phone-numbers/{{sharedPhone1}}/status"
+          }
+        },
+        {
+          "name": "7.3 Malformed phone in path - too short (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "organization", "value": "orange" }],
+            "url": "{{baseUrl}}/phone-numbers/0101234/status"
+          }
+        },
+        {
+          "name": "7.4 Malformed phone in path - letters (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "organization", "value": "orange" }],
+            "url": "{{baseUrl}}/phone-numbers/abcdefghijk/status"
+          }
+        },
+        {
+          "name": "7.5 Out of range shape-valid phone (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "organization", "value": "orange" }],
+            "url": "{{baseUrl}}/phone-numbers/01399999999/status"
+          }
+        },
+        {
+          "name": "7.6 Missing org header (400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": { "method": "GET", "url": "{{baseUrl}}/phone-numbers/01012345678/status" }
+        },
+        {
+          "name": "7.7 Wrong method POST (405)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 405', () => pm.response.to.have.status(405));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "organization", "value": "orange" }],
+            "url": "{{baseUrl}}/phone-numbers/01012345678/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Scheduled Expiry Job (manual verification)",
+      "item": [
+        {
+          "name": "8.1 Create request to observe expiry (note id, wait 2+ min, then re-check via Get By Id)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('lifecycleId', pm.response.json().id);",
+            "console.log('Created request id ' + pm.response.json().id + ' - wait 2+ minutes then run 8.2 to confirm it auto-cancels');"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "organization", "value": "orange" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"phoneNumber\": \"01090005555\"}" },
+            "url": "{{baseUrl}}/porting-requests"
+          }
+        },
+        {
+          "name": "8.2 Re-check after 2+ minutes - should now be CANCELED",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('status is CANCELED', () => pm.expect(pm.response.json().status).to.eql('CANCELED'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "organization", "value": "orange" }],
+            "url": "{{baseUrl}}/porting-requests/{{lifecycleId}}"
+          }
+        }
+      ]
+    }
+  ]
+}
