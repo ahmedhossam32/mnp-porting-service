@@ -318,7 +318,7 @@ export class RequestListComponent {
     event.stopPropagation();
     this.portingRequestService.accept(request.id).subscribe({
       next: (updated) => {
-        this.toastService.success(`Request #${updated.id} accepted.`);
+        this.toastService.success(`Request #${updated.id} for ${updated.phoneNumber} has been accepted.`);
         this.fetchRequests();
         if (this.selectedRequest()?.id === updated.id) {
           this.selectedRequest.set(updated);
@@ -326,7 +326,7 @@ export class RequestListComponent {
       },
       error: (err: HttpErrorResponse) => {
         const errorBody = err.error as ErrorResponseDto | undefined;
-        this.toastService.error(errorBody?.message ?? 'Failed to accept request.');
+        this.toastService.error(errorBody?.message ?? `Failed to accept request #${request.id}.`);
       }
     });
   }
@@ -335,7 +335,7 @@ export class RequestListComponent {
     event.stopPropagation();
     this.portingRequestService.reject(request.id).subscribe({
       next: (updated) => {
-        this.toastService.success(`Request #${updated.id} rejected.`);
+        this.toastService.success(`Request #${updated.id} for ${updated.phoneNumber} has been rejected.`);
         this.fetchRequests();
         if (this.selectedRequest()?.id === updated.id) {
           this.selectedRequest.set(updated);
@@ -343,7 +343,7 @@ export class RequestListComponent {
       },
       error: (err: HttpErrorResponse) => {
         const errorBody = err.error as ErrorResponseDto | undefined;
-        this.toastService.error(errorBody?.message ?? 'Failed to reject request.');
+        this.toastService.error(errorBody?.message ?? `Failed to reject request #${request.id}.`);
       }
     });
   }
